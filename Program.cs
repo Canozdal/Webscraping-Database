@@ -37,16 +37,23 @@ class Program
 {
     static async Task Main()
     {
-        string connection_string = "server=localhost;port=3306;database=news;user=root;password=password;";
+        
         List<NewsItem> items = GetNews("https://www.sondakika.com/", "//*[@id=\"bx-pager\"]");
+        WriteToDatabase(items);
+        Console.WriteLine(items.Count);
+
+    }
+    static void WriteToDatabase(List<NewsItem> items)
+    {
+        string connection_string = "server=localhost;port=3306;database=news;user=root;password=password;";
         using (var connection = new MySqlConnection(connection_string))
         {
             connection.Open();
-            foreach(var item in items)
+            foreach (var item in items)
             {
                 string query = "INSERT IGNORE INTO news(text,registryTime,hRef) VALUES(@Title,@RegistryTime,@HrefString)";
 
-                using(var command = new MySqlCommand(query, connection))
+                using (var command = new MySqlCommand(query, connection))
                 {
                     command.Parameters.AddWithValue("@Title", item.Title);
                     command.Parameters.AddWithValue("@HrefString", item.HrefString);
@@ -54,12 +61,8 @@ class Program
                     command.ExecuteNonQuery();
                 }
             }
-            connection.Close(); 
+            connection.Close();
         }
-
-
-        Console.WriteLine(items.Count);
-
     }
     static string HandleTurkishCharacters(string text)
     {
