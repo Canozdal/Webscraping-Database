@@ -9,6 +9,7 @@ using MySql.Data.MySqlClient;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Reflection;
+using System.Linq.Expressions;
 
 class NewsItem
 {
@@ -41,6 +42,9 @@ class Program
         List<NewsItem> items = GetNews("https://www.sondakika.com/", "//*[@id=\"bx-pager\"]");
         WriteToDatabase(items);
         Console.WriteLine(items.Count);
+
+        ReadFromDatabase("descending");
+
 
     }
     static void WriteToDatabase(List<NewsItem> items)
@@ -87,13 +91,57 @@ class Program
                 string newsLink = anchorElement.GetAttributeValue("href", "");
                 string decodedTitle = WebUtility.HtmlDecode(titleAttribute);
                 string handledText = HandleTurkishCharacters(decodedTitle);
-                Console.WriteLine(newsLink);
                 news.Add(new NewsItem(handledText, newsLink));
             }
         }
         return news;
     }
+    static void ReadFromDatabase(string rule)
+    {
+        string connection_string = "server=localhost;port=3306;database=news;user=root;password=password;";
+        try
+        {
+            using (var connection = new MySqlConnection(connection_string))
+            {
+                connection.Open();
+                string query = "";
 
+                switch (rule)
+                {
+                    case "descending":
+                        query = "SELECT * FROM news ORDER BY registryTime DESC";
+                        Console.WriteLine("Descending");
+                        break;
+                    case "ascending":
+                        query = "SELECT * FROM news ORDER BY registryTime ASC";
+                        Console.WriteLine("Ascending");
+                        break;
+                    default:
+                        query = "SELECT * FROM news";
+                        Console.WriteLine("Default Rule");
+                        break;
+                }
+                using (MySqlCommand command = new MySqlCommand(query, connection))
+                {
+
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Console.WriteLine(reader.GetString(reader.GetOrdinal("text")) + " " + reader.GetString(reader.GetOrdinal("href")));
+                        }
+                    }
+
+                }
+                connection.Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while reading {ex}");
+        }
+
+    }
     static async Task GetCheapestFlights(string apiKey,string origin, string destination,DateTime departureDate)
     {
         string base_url = "https://partners.api.skyscanner.net/apiservices/v3/flights/live/search/create";
